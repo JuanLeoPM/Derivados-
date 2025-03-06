@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizado para Streamlit
+# CSS personalizado 
 st.markdown("""
 <style>
 /* Ajustar el tamaño y la alineación de los contenedores de valores CALL y PUT */
@@ -58,7 +58,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Clase BlackScholes
+#  BlackScholes
 class BlackScholes:
     def __init__(
         self,
@@ -112,7 +112,7 @@ class BlackScholes:
 
         return precio_call, precio_put
 
-# Clase Heston
+# Modelo Heston
 class Heston:
     def __init__(
         self,
