@@ -1,4 +1,3 @@
-# Derivados-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -15,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizado 
+# CSS personalizado para Streamlit
 st.markdown("""
 <style>
 /* Ajustar el tamaño y la alineación de los contenedores de valores CALL y PUT */
@@ -58,7 +57,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-#  BlackScholes
+# Clase BlackScholes
 class BlackScholes:
     def __init__(
         self,
@@ -99,20 +98,17 @@ class BlackScholes:
         self.precio_call = precio_call
         self.precio_put = precio_put
 
-        # Griegas
-        # Delta
-        self.delta_call = norm.cdf(d1)
-        self.delta_put = 1 - norm.cdf(d1)
-
-        # Gamma
-        self.gamma_call = norm.pdf(d1) / (
-            precio_ejercicio * volatilidad * np.sqrt(tiempo_hasta_vencimiento)
-        )
-        self.gamma_put = self.gamma_call
-
         return precio_call, precio_put
 
-# Modelo Heston
+    def calcular_pnl(self, precio_spot):
+        """
+        Calcula el P&L para CALL y PUT en función del precio spot.
+        """
+        pnl_call = np.maximum(precio_spot - self.precio_ejercicio, 0) - self.precio_call
+        pnl_put = np.maximum(self.precio_ejercicio - precio_spot, 0) - self.precio_put
+        return pnl_call, pnl_put
+
+# Clase Heston
 class Heston:
     def __init__(
         self,
@@ -164,6 +160,17 @@ class Heston:
         payoff = np.maximum(S[-1, :] - K, 0) if tipo == "call" else np.maximum(K - S[-1, :], 0)
         precio = np.exp(-self.r * self.T) * np.mean(payoff)
         return precio
+
+    def calcular_pnl(self, K, precio_spot, tipo="call"):
+        """
+        Calcula el P&L para una opción CALL o PUT en función del precio spot.
+        """
+        precio_opcion = self.calcular_precio_opcion(K, tipo)
+        if tipo == "call":
+            pnl = np.maximum(precio_spot - K, 0) - precio_opcion
+        else:
+            pnl = np.maximum(K - precio_spot, 0) - precio_opcion
+        return pnl
 
 # Barra lateral para entradas del usuario
 with st.sidebar:
@@ -223,6 +230,33 @@ with col2:
         </div>
     """, unsafe_allow_html=True)
 
+# Calcular y mostrar P&L para Black-Scholes
+st.markdown("### Profit & Loss (P&L) para Black-Scholes")
+precio_spot_pnl = st.number_input("Precio Spot para calcular P&L", value=precio_actual)
+pnl_call, pnl_put = bs_model.calcular_pnl(precio_spot_pnl)
+
+col1, col2 = st.columns([1, 1], gap="small")
+
+with col1:
+    st.markdown(f"""
+        <div class="metric-container metric-call">
+            <div>
+                <div class="metric-label">P&L CALL</div>
+                <div class="metric-value">${pnl_call:.2f}</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+        <div class="metric-container metric-put">
+            <div>
+                <div class="metric-label">P&L PUT</div>
+                <div class="metric-value">${pnl_put:.2f}</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
 # Modelo de Heston
 st.markdown("## Modelo de Heston")
 heston_model = Heston(S0, v0, tasa_interes, kappa, theta, sigma, rho, T, N, M)
@@ -240,10 +274,11 @@ ax.set_ylabel("Precio del Activo")
 ax.set_title("Simulación del Modelo de Heston")
 st.pyplot(fig)
 
-# Calcular precios de opciones con Heston
-st.markdown("### Precios de Opciones con el Modelo de Heston")
-precio_call_heston = heston_model.calcular_precio_opcion(precio_ejercicio, tipo="call")
-precio_put_heston = heston_model.calcular_precio_opcion(precio_ejercicio, tipo="put")
+# Calcular y mostrar P&L para Heston
+st.markdown("### Profit & Loss (P&L) para Heston")
+precio_spot_pnl_heston = st.number_input("Precio Spot para calcular P&L (Heston)", value=S0)
+pnl_call_heston = heston_model.calcular_pnl(precio_ejercicio, precio_spot_pnl_heston, tipo="call")
+pnl_put_heston = heston_model.calcular_pnl(precio_ejercicio, precio_spot_pnl_heston, tipo="put")
 
 col1, col2 = st.columns([1, 1], gap="small")
 
@@ -251,8 +286,8 @@ with col1:
     st.markdown(f"""
         <div class="metric-container metric-call">
             <div>
-                <div class="metric-label">Valor CALL (Heston)</div>
-                <div class="metric-value">${precio_call_heston:.2f}</div>
+                <div class="metric-label">P&L CALL (Heston)</div>
+                <div class="metric-value">${pnl_call_heston:.2f}</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -261,8 +296,8 @@ with col2:
     st.markdown(f"""
         <div class="metric-container metric-put">
             <div>
-                <div class="metric-label">Valor PUT (Heston)</div>
-                <div class="metric-value">${precio_put_heston:.2f}</div>
+                <div class="metric-label">P&L PUT (Heston)</div>
+                <div class="metric-value">${pnl_put_heston:.2f}</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
